@@ -1,0 +1,24 @@
+name: comment-dm
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: ig-state
+jobs:
+  dm:
+    if: ${{ vars.ACCOUNT_CONNECTED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/dm.py
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      - run: |
+          git config user.name "poster-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add dm_sent.json
+          git diff --cached --quiet || (git commit -m "dm: update state" && git pull --rebase && git push)
