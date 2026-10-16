@@ -1,0 +1,26 @@
+name: scheduled-post
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: ig-state
+jobs:
+  post:
+    if: ${{ vars.ACCOUNT_CONNECTED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/post.py
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          TH_TOKEN: ${{ secrets.TH_TOKEN }}
+          TH_USER_ID: ${{ secrets.TH_USER_ID }}
+      - run: |
+          git config user.name "poster-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add posts.json posted.json
+          git diff --cached --quiet || (git commit -m "post: update state" && git pull --rebase && git push)
