@@ -1,6 +1,8 @@
 name: comment-dm
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
 permissions:
   contents: write
 concurrency: ig-state
