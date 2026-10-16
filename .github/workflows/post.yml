@@ -1,6 +1,8 @@
 name: scheduled-post
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
 permissions:
   contents: write
 concurrency: ig-state
