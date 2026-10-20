@@ -45,6 +45,8 @@
    "거품기",
    "휘핑"
   ],
-  "at": "2026-10-20 19:00"
+  "at": "2026-10-20 14:17",
+  "recovery_authorization": "2026-10-20 user explicitly requested one additional immediate post to replace missed morning slot",
+  "original_slot": "2026-10-20 19:00"
  }
 ]
