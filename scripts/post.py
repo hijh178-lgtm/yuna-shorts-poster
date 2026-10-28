@@ -12,8 +12,38 @@ from common import api, load, save, raw_url, IGID, th_api, TH_TOK, THID, INPOCK,
 KST = dt.timezone(dt.timedelta(hours=9))
 
 
+def validate_threads_caption(value, disclosure):
+    import re
+    import unicodedata
+    from urllib.parse import urlsplit
+    if not isinstance(value, str) or not value.strip() or not isinstance(disclosure, str) or not disclosure:
+        raise ValueError('invalid_threads_caption')
+    text = value.strip()
+    if (len(text) > 500 or '\\n' in text or '\\r' in text or
+            any(c != '\n' and unicodedata.category(c)[0] not in 'LMNPSZ' for c in text)):
+        raise ValueError('invalid_threads_caption')
+    direct_link = False
+    for candidate in re.findall(r'https://[^\s<>()]+', text):
+        try:
+            url = urlsplit(candidate.rstrip('.,!?'))
+            if (url.hostname in ('link.coupang.com', 'coupa.ng', 'link.inpock.co.kr')
+                    and not url.username and not url.password and url.port is None and len(url.path) > 1):
+                direct_link = True
+        except ValueError:
+            pass
+    reply_link = '링크' in text and ('첫 댓글' in text or '첫 답글' in text)
+    if (not text.startswith('[광고]') or text.count('[광고]') != 1 or
+            text.count(disclosure) != 1 or '?' not in text or
+            not (reply_link or direct_link) or
+            re.search(r'd\s*m|디\s*엠|다이렉트|쪽지|메시지', text, re.IGNORECASE)):
+        raise ValueError('invalid_threads_caption')
+    return text
+
+
 def threads_text(p):
     """인스타 캡션 → 쓰레드 본문. 쓰레드엔 댓글 자동 DM 이 없으니 DM 줄을 빼고 '첫 댓글에 링크' 로 바꾼다. 500자 제한."""
+    if "threads_caption" in p:
+        return validate_threads_caption(p["threads_caption"], HEAD)
     lines = []
     for l in p["caption"].splitlines():
         if "DM" in l:
@@ -73,6 +103,8 @@ for p in posts:
     if p.get("media_id") and (p.get("th_id") or not (TH_TOK and THID)):
         continue
     try:
+        if "threads_caption" in p:
+            threads_text(p)  # Validate before either platform is published.
         if not p.get("media_id"):
             if p.get("ig_publish_pending"):
                 raise RuntimeError("Instagram publish outcome requires reconciliation; retry suppressed")
