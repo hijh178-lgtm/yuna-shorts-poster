@@ -1,11 +1,11 @@
 name: yuna-carousel-five-days
 on:
   schedule:
-    - cron: '0,10,20,30,40,50 3-5 6-10 11 *'
+    - cron: '0,10,20,30,40,50 3-5 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Validate account and all 25 assets without publishing'
+        description: 'Validate account and all queued assets without publishing'
         type: boolean
         default: true
 permissions:

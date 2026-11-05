@@ -1,4 +1,4 @@
-"""Publish only the approved five-day carousel queue. Durable checkpoints prevent duplicate retries."""
+"""Publish the approved rolling carousel queue. Durable checkpoints prevent duplicate retries."""
 import base64, datetime as dt, hashlib, json, os, pathlib, time, urllib.parse, urllib.request
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 QUEUE='carousel-20261106/queue.json'
@@ -23,7 +23,9 @@ def eligible(row, now):
     return due<=now<due+dt.timedelta(hours=24)
 
 def validate(rows):
-    if len(rows)!=5 or len({r['id'] for r in rows})!=5:raise RuntimeError('Unexpected queue')
+    if not rows or len({r['id'] for r in rows})!=len(rows):raise RuntimeError('Unexpected queue')
+    days=[dt.datetime.fromisoformat(r['at']).astimezone(dt.timezone(dt.timedelta(hours=9))).date() for r in rows]
+    if len(set(days))!=len(days):raise RuntimeError('More than one carousel per KST day')
     for r in rows:
         if r['username']!='yuna._log' or len(r['images'])!=5:raise RuntimeError('Wrong account/image count')
         if len(r['caption'])>2200 or not r['caption'].startswith('[광고]') or r['affiliate_url'] not in r['caption']:raise RuntimeError('Caption invalid')
@@ -45,14 +47,14 @@ def main():
         body={'message':'carousel: checkpoint','sha':sha,'content':base64.b64encode(json.dumps(state,ensure_ascii=False,indent=2).encode()).decode()}
         result=request(state_url,gh,body,method='PUT');sha=result['content']['sha']
     now=dt.datetime.now(dt.timezone.utc)
-    print('Validated account yuna._log; 5 carousels; 25 JPEG assets; captions and hashes OK')
+    print(f'Validated account yuna._log; {len(rows)} carousels; {sum(len(r["images"]) for r in rows)} JPEG assets; captions and hashes OK')
     if os.environ.get('DRY_RUN','').lower()=='true':
         for r in rows:
             for im in r['images']:
                 url=f'https://raw.githubusercontent.com/{repo}/main/'+urllib.parse.quote(im['file'])
                 with urllib.request.urlopen(url,timeout=30) as response:blob=response.read()
                 if hashlib.sha256(blob).hexdigest()!=im['sha256']:raise RuntimeError('Public asset mismatch')
-        print('Preflight passed: 25 public assets accessible; no publication performed');return
+        print('Preflight passed: all public assets accessible; no publication performed');return
     for row in rows:
         if not eligible(row,now):continue
         st=state.setdefault(row['id'],{})
