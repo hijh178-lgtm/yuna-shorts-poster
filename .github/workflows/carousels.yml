@@ -1,0 +1,30 @@
+name: yuna-carousel-five-days
+on:
+  schedule:
+    - cron: '0,10,20,30,40,50 3-5 6-10 11 *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Validate account and all 25 assets without publishing'
+        type: boolean
+        default: true
+permissions:
+  contents: write
+concurrency:
+  group: yuna-carousel-five-days
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate and publish due carousels
+        run: python scripts/post_carousels.py
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
