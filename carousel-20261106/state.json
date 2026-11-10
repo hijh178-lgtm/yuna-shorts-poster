@@ -64,7 +64,9 @@
     "verified": true
   },
   "carousel-2026-11-10-025": {
-    "children": [],
+    "children": [
+      "17952513372341410"
+    ],
     "phase": "creating"
   }
 }
